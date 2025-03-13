@@ -857,16 +857,7 @@
         updateKnobRotations();
       }
       
-      // Rotate console slightly for visual appeal before game starts
-      if (!gameStarted) {
-        consoleMesh.rotation.y = Math.sin(Date.now() * 0.0005) * 0.2;
-      } else {
-        // Allow user to rotate console slightly during gameplay
-        if (mouseDown) {
-          consoleMesh.rotation.y += (mouseX - window.innerWidth / 2) * 0.0001;
-          consoleMesh.rotation.x = Math.max(-0.1, Math.min(0.1, consoleMesh.rotation.x + (mouseY - window.innerHeight / 2) * 0.0001));
-        }
-      }
+      // No Rotation
       
       renderer.render(scene, camera);
     }
