@@ -1,0 +1,2020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GE Healthcare Ultrasound Simulator</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.7.1/gsap.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: 'Arial', sans-serif;
+      color: white;
+      background-color: #1a1a1a;
+    }
+    
+    #container {
+      position: relative;
+      width: 100%;
+      height: 100vh;
+    }
+    
+    #splashScreen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #41215e 0%, #6b378b 50%, #8755a1 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      transition: opacity 0.8s ease-in-out;
+    }
+    
+    #logo {
+      width: 300px;
+      height: 120px;
+      margin-bottom: 40px;
+      background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMDAgNzAiPjxwYXRoIGZpbGw9IndoaXRlIiBkPSJNMzAgMTBINzBWMzBIMzBWMTBaTTMwIDQwSDcwVjYwSDMwVjQwWk04MCAxMEgxMjBWNjBIODBWMTBaTTEzMCAxMEgxNzBWMjBIMTMwVjEwWk0xMzAgMjVIMTcwVjM1SDEzMFYyNVpNMTMwIDQwSDE3MFY2MEgxMzBWNDBaTTE4MCAxMEgyMzBWNjBIMTgwVjEwWk0yNDAgMTBIMjgwVjYwSDI0MFYxMFoiLz48dGV4dCB4PSIxMDAiIHk9IjkwIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCI+SGVhbHRoY2FyZTwvdGV4dD48L3N2Zz4=') no-repeat center;
+    }
+    
+    #title {
+      font-size: 36px;
+      font-weight: bold;
+      margin-bottom: 30px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+      text-align: center;
+    }
+    
+    #presentedBy {
+      font-size: 18px;
+      margin-bottom: 10px;
+      letter-spacing: 2px;
+      font-weight: bold;
+      color: rgba(255, 255, 255, 0.9);
+      text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    }
+    
+    #startButton {
+      background-color: white;
+      color: #6b378b;
+      border: none;
+      padding: 15px 40px;
+      font-size: 20px;
+      border-radius: 30px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+    
+    #startButton:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    #probeSelector {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background-color: rgba(65, 33, 94, 0.85);
+      padding: 15px;
+      border-radius: 10px;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      backdrop-filter: blur(5px);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      max-width: 250px;
+    }
+    
+    .probe-section-title {
+      color: white;
+      text-align: center;
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+      padding-bottom: 8px;
+    }
+    
+    .probe-btn {
+      background-color: #6b378b;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .probe-btn:hover {
+      background-color: #8755a1;
+      transform: scale(1.02);
+    }
+    
+    .probe-btn.active {
+      background-color: #41215e;
+      box-shadow: 0 0 10px rgba(155, 89, 182, 0.7);
+    }
+    
+    .probe-icon {
+      width: 30px;
+      height: 30px;
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      margin-right: 8px;
+      filter: brightness(1.5);
+    }
+    
+    .controls-panel {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background-color: rgba(65, 33, 94, 0.85);
+      padding: 15px;
+      border-radius: 10px;
+      z-index: 100;
+      backdrop-filter: blur(5px);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .controls-title {
+      color: white;
+      text-align: center;
+      margin-top: 0;
+      margin-bottom: 15px;
+      font-size: 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+      padding-bottom: 8px;
+    }
+    
+    .control-row {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .control-knob {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6b378b, #41215e);
+      position: relative;
+      cursor: pointer;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3), inset 0 2px 3px rgba(255, 255, 255, 0.2);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .knob-indicator {
+      position: absolute;
+      width: 4px;
+      height: 20px;
+      background-color: white;
+      top: 10px;
+      left: 50%;
+      transform-origin: bottom center;
+      border-radius: 4px;
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+    }
+    
+    .control-label {
+      position: absolute;
+      bottom: -25px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.9);
+    }
+    
+    .control-value {
+      position: absolute;
+      bottom: -40px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+    
+    #scanModeButtons {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 50px;
+    }
+    
+    .scan-btn {
+      background-color: rgba(65, 33, 94, 0.6);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 14px;
+    }
+    
+    .scan-btn:hover {
+      background-color: rgba(107, 55, 139, 0.8);
+    }
+    
+    .scan-btn.active {
+      background-color: #6b378b;
+      box-shadow: 0 0 10px rgba(107, 55, 139, 0.6);
+      transform: scale(1.05);
+    }
+    
+    #canvasContainer {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+    
+    #screenCanvas {
+      width: 100%;
+      height: 100%;
+    }
+    
+    #overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    
+    #gelogo {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      color: white;
+      font-size: 24px;
+      font-weight: bold;
+      text-shadow: 0 0 10px rgba(107, 55, 139, 0.8);
+    }
+    
+    #hud {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 14px;
+      background-color: rgba(0, 0, 0, 0.4);
+      padding: 5px 10px;
+      border-radius: 4px;
+    }
+    
+    #score {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+      background-color: rgba(107, 55, 139, 0.7);
+      padding: 5px 15px;
+      border-radius: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+    
+    #patientContainer {
+      position: absolute;
+      left: 20px;
+      top: 20px;
+      width: 200px;
+      background-color: rgba(65, 33, 94, 0.85);
+      border-radius: 10px;
+      padding: 15px;
+      text-align: center;
+      backdrop-filter: blur(5px);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .patient-title {
+      color: white;
+      margin-top: 0;
+      margin-bottom: 15px;
+      font-size: 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+      padding-bottom: 8px;
+    }
+    
+    #patientImg {
+      width: 100%;
+      height: 120px;
+      background-color: rgba(0, 0, 0, 0.3);
+      margin: 0 auto;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 16px;
+      margin-bottom: 15px;
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.4);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .patient-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: rgba(0, 0, 0, 0.6);
+      z-index: 1;
+    }
+    
+    .patient-difficulty {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      display: flex;
+      z-index: 2;
+    }
+    
+    .difficulty-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-left: 3px;
+      background-color: rgba(255, 255, 255, 0.4);
+    }
+    
+    .difficulty-dot.active {
+      background-color: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 0 5px rgba(255, 255, 255, 0.7);
+    }
+    
+    #scanButton {
+      background: linear-gradient(135deg, #6b378b, #41215e);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 30px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.3s ease;
+      width: 100%;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+    
+    #scanButton:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
+    }
+    
+    #scanButton:active {
+      transform: scale(0.98);
+    }
+    
+    .notification {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: rgba(107, 55, 139, 0.95);
+      color: white;
+      padding: 20px 30px;
+      border-radius: 10px;
+      text-align: center;
+      font-size: 24px;
+      opacity: 0;
+      transition: opacity 0.5s;
+      pointer-events: none;
+      z-index: 1000;
+      box-shadow: 0 5px 25px rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(5px);
+    }
+    
+    #threeDContainer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+    }
+    
+    .tooltip {
+      position: absolute;
+      background-color: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 5px;
+      font-size: 14px;
+      z-index: 1000;
+      pointer-events: none;
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    
+    #gameUI {
+      opacity: 0;
+      transition: opacity 1s ease-in-out;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <!-- Splash Screen -->
+    <div id="splashScreen">
+      <div id="presentedBy">VINCENZO SALVIA PRESENTS</div>
+      <div id="logo"></div>
+      <div id="title">Ultrasound Simulator</div>
+      <button id="startButton">INIZIA SIMULAZIONE</button>
+    </div>
+    
+    <!-- 3D Container for THREE.js -->
+    <div id="threeDContainer"></div>
+    
+    <!-- Game UI (initially hidden) -->
+    <div id="gameUI">
+      <!-- Patient Info Panel -->
+      <div id="patientContainer">
+        <h3 class="patient-title">Caso Clinico</h3>
+        <div id="patientImg">
+          <span class="patient-overlay">Seleziona Caso</span>
+          <div class="patient-difficulty">
+            <div class="difficulty-dot"></div>
+            <div class="difficulty-dot"></div>
+            <div class="difficulty-dot"></div>
+          </div>
+        </div>
+        <button id="scanButton">SCANSIONA</button>
+      </div>
+      
+      <!-- Probe Selector -->
+      <div id="probeSelector">
+        <h3 class="probe-section-title">Sonde Ecografiche</h3>
+        <button class="probe-btn active" data-probe="linear">
+          <div class="probe-icon" style="background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik01IDJoMTR2NWgtMTRWMnptMCA2aDE0djEwSDV2LTEweiIvPjwvc3ZnPg==');"></div>
+          Lineare 7-15 MHz
+        </button>
+        <button class="probe-btn" data-probe="convex">
+          <div class="probe-icon" style="background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik01IDloMTR2MmMwIDQtMyA3LTcgN3MtNy0zLTctN1Y5eiIvPjxwYXRoIGZpbGw9IndoaXRlIiBkPSJNNSAyaDEwdjZINVYyeiIvPjwvc3ZnPg==');"></div>
+          Convex 2-5 MHz
+        </button>
+        <button class="probe-btn" data-probe="endocavity">
+          <div class="probe-icon" style="background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik04IDJoOHYxNGMwIDItMiA0LTQgNHMtNC0yLTQtNFYyeiIvPjwvc3ZnPg==');"></div>
+          Endocavitaria 5-9 MHz
+        </button>
+        <button class="probe-btn" data-probe="phased">
+          <div class="probe-icon" style="background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik04IDJoOHY0bC04IDEwVjJ6Ii8+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik04IDZoOHYxMGwtMy41IDRoLTFsLTMuNS00VjZ6Ii8+PC9zdmc+');"></div>
+          Phased Array 2-4 MHz
+        </button>
+        <button class="probe-btn" data-probe="volumetric">
+          <div class="probe-icon" style="background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik02IDRoMTJ2NGwtNiA4bC02LThWNHoiLz48cGF0aCBmaWxsPSJ3aGl0ZSIgZD0iTTYgOGgxMnY4SDZ2LTh6Ii8+PC9zdmc+');"></div>
+          Volumetrica 3D/4D
+        </button>
+      </div>
+      
+      <!-- Controls Panel -->
+      <div class="controls-panel">
+        <h3 class="controls-title">Controlli</h3>
+        <div class="control-row">
+          <div class="control-knob" id="depthKnob">
+            <div class="knob-indicator" id="depthIndicator"></div>
+            <div class="control-label">Profondità</div>
+            <div class="control-value" id="depthValue">15 cm</div>
+          </div>
+          <div class="control-knob" id="gainKnob">
+            <div class="knob-indicator" id="gainIndicator"></div>
+            <div class="control-label">Guadagno</div>
+            <div class="control-value" id="gainValue">65%</div>
+          </div>
+          <div class="control-knob" id="focusKnob">
+            <div class="knob-indicator" id="focusIndicator"></div>
+            <div class="control-label">Focus</div>
+            <div class="control-value" id="focusValue">5 cm</div>
+          </div>
+        </div>
+        <div id="scanModeButtons">
+          <button class="scan-btn active" data-mode="bmode">B-Mode</button>
+          <button class="scan-btn" data-mode="cfm">Color Doppler</button>
+          <button class="scan-btn" data-mode="doppler">Spettrale</button>
+          <button class="scan-btn" data-mode="3d">3D/4D</button>
+        </div>
+      </div>
+      
+      <!-- HUD Elements -->
+      <div id="score">Score: 0</div>
+      
+      <!-- Notifications -->
+      <div class="notification" id="notification"></div>
+      
+      <!-- Tooltip -->
+      <div class="tooltip" id="tooltip"></div>
+    </div>
+  </div>
+
+  <script>
+    // Three.js variables
+    let scene, camera, renderer;
+    let consoleMesh, screenMaterial, displayCanvas, displayContext;
+    
+    // Game variables
+    let currentProbe = 'linear';
+    let currentMode = 'bmode';
+    let depth = 15;
+    let gain = 65;
+    let focus = 5;
+    let score = 0;
+    let gameStarted = false;
+    let mouseDown = false;
+    let mouseX = 0, mouseY = 0;
+    
+    // Scan targets (what the player needs to find)
+    const scanTargets = [
+      { name: 'Calcolo Renale', difficulty: 2, probe: 'convex', background: 'rgba(100, 100, 100, 0.3)' },
+      { name: 'Stenosi Carotidea', difficulty: 2, probe: 'linear', background: 'rgba(80, 100, 120, 0.3)' },
+      { name: 'Gravidanza 12w', difficulty: 1, probe: 'endocavity', background: 'rgba(120, 120, 140, 0.3)' },
+      { name: 'Insufficienza Mitralica', difficulty: 3, probe: 'phased', background: 'rgba(100, 80, 80, 0.3)' },
+      { name: 'Feto 3D', difficulty: 2, probe: 'volumetric', background: 'rgba(120, 100, 120, 0.3)' },
+      { name: 'Tiroide Nodulare', difficulty: 1, probe: 'linear', background: 'rgba(90, 110, 90, 0.3)' },
+      { name: 'Cirrosi Epatica', difficulty: 2, probe: 'convex', background: 'rgba(110, 90, 70, 0.3)' },
+      { name: 'Aorta Addominale', difficulty: 1, probe: 'convex', background: 'rgba(120, 80, 80, 0.3)' },
+      { name: 'TVP Femorale', difficulty: 2, probe: 'linear', background: 'rgba(80, 80, 120, 0.3)' },
+      { name: 'Versamento Pleurico', difficulty: 1, probe: 'phased', background: 'rgba(100, 120, 140, 0.3)' }
+    ];
+    
+    let currentTarget = null;
+    
+    // DOM Elements
+    const startButton = document.getElementById('startButton');
+    const splashScreen = document.getElementById('splashScreen');
+    const gameUI = document.getElementById('gameUI');
+    
+    // Event listeners
+    startButton.addEventListener('click', startGame);
+    
+    // Initialize
+    initThreeJS();
+    setupEventListeners();
+    
+    // Initialize Three.js scene
+    function initThreeJS() {
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x111111);
+      
+      // Camera setup
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(0, 7, 30);
+      camera.lookAt(0, 5, 0);
+      
+      // Renderer
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.shadowMap.enabled = true;
+      document.getElementById('threeDContainer').appendChild(renderer.domElement);
+      
+      // Create display canvas for ultrasound screen
+      displayCanvas = document.createElement('canvas');
+      displayCanvas.width = 512;
+      displayCanvas.height = 512;
+      displayContext = displayCanvas.getContext('2d');
+      
+      // Create texture from canvas
+      const displayTexture = new THREE.CanvasTexture(displayCanvas);
+      screenMaterial = new THREE.MeshBasicMaterial({ 
+        map: displayTexture,
+        side: THREE.FrontSide
+      });
+      
+      // Lighting
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+      scene.add(ambientLight);
+      
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      directionalLight.position.set(10, 20, 15);
+      directionalLight.castShadow = true;
+      directionalLight.shadow.mapSize.width = 2048;
+      directionalLight.shadow.mapSize.height = 2048;
+      scene.add(directionalLight);
+      
+      const pointLight = new THREE.PointLight(0x9966cc, 1, 50);
+      pointLight.position.set(0, 15, 5);
+      scene.add(pointLight);
+      
+      // Create the GE Ultrasound machine 3D model
+      createUltrasoundConsole();
+      
+      // Handle window resize
+      window.addEventListener('resize', onWindowResize);
+      
+      // Start animation loop
+      animate();
+    }
+    
+    function createUltrasoundConsole() {
+      // Group for the entire console
+      consoleMesh = new THREE.Group();
+      
+      // GE Healthcare Colors
+      const gePurple = new THREE.Color(0x6b378b);
+      const geDarkPurple = new THREE.Color(0x41215e);
+      const geGray = new THREE.Color(0x333333);
+      
+      // Main console body
+      const consoleGeometry = new THREE.BoxGeometry(20, 12, 5);
+      const consoleMaterial = new THREE.MeshPhongMaterial({ 
+        color: gePurple,
+        specular: 0x222222,
+        shininess: 30
+      });
+      const consoleBody = new THREE.Mesh(consoleGeometry, consoleMaterial);
+      consoleBody.position.set(0, 0, 0);
+      consoleBody.castShadow = true;
+      consoleBody.receiveShadow = true;
+      consoleMesh.add(consoleBody);
+      
+      // Console top with rounded edges
+      const topGeometry = new THREE.BoxGeometry(20, 1, 5);
+      const topMaterial = new THREE.MeshPhongMaterial({ 
+        color: geDarkPurple,
+        specular: 0x333333,
+        shininess: 40
+      });
+      const consoleTop = new THREE.Mesh(topGeometry, topMaterial);
+      consoleTop.position.set(0, 6, 0);
+      consoleTop.castShadow = true;
+      consoleTop.receiveShadow = true;
+      consoleMesh.add(consoleTop);
+      
+      // Console base/stand
+      const standGeometry = new THREE.BoxGeometry(10, 2, 10);
+      const standMaterial = new THREE.MeshPhongMaterial({ color: geGray });
+      const stand = new THREE.Mesh(standGeometry, standMaterial);
+      stand.position.set(0, -8.5, 0);
+      stand.castShadow = true;
+      stand.receiveShadow = true;
+      consoleMesh.add(stand);
+      
+      // Support column
+      const columnGeometry = new THREE.CylinderGeometry(1, 1, 10, 16);
+      const columnMaterial = new THREE.MeshPhongMaterial({ color: geGray });
+      const column = new THREE.Mesh(columnGeometry, columnMaterial);
+      column.position.set(0, -3.5, 0);
+      column.castShadow = true;
+      column.receiveShadow = true;
+      consoleMesh.add(column);
+      
+      // Screen support arm
+      const armGeometry = new THREE.BoxGeometry(4, 8, 2);
+      const armMaterial = new THREE.MeshPhongMaterial({ 
+        color: geGray,
+        specular: 0x222222,
+        shininess: 30
+      });
+      const screenArm = new THREE.Mesh(armGeometry, armMaterial);
+      screenArm.position.set(0, 10, -2);
+      screenArm.castShadow = true;
+      screenArm.receiveShadow = true;
+      consoleMesh.add(screenArm);
+      
+      // Screen frame
+      const screenGeometry = new THREE.BoxGeometry(16, 12, 1.5);
+      const screenFrameMaterial = new THREE.MeshPhongMaterial({ 
+        color: geDarkPurple,
+        specular: 0x444444,
+        shininess: 50
+      });
+      const screenFrame = new THREE.Mesh(screenGeometry, screenFrameMaterial);
+      screenFrame.position.set(0, 15, 0);
+      screenFrame.rotation.x = -0.1; // Leggera inclinazione per migliore visibilità
+      screenFrame.castShadow = true;
+      screenFrame.receiveShadow = true;
+      consoleMesh.add(screenFrame);
+      
+      // Screen display
+      const displayGeometry = new THREE.PlaneGeometry(14, 10);
+      const displayScreen = new THREE.Mesh(displayGeometry, screenMaterial);
+      displayScreen.position.set(0, 15, 0.8);
+      displayScreen.rotation.x = -0.1; // Stessa inclinazione del frame
+      consoleMesh.add(displayScreen);
+      
+      // Control panel
+      const panelGeometry = new THREE.BoxGeometry(18, 6, 1);
+      const panelMaterial = new THREE.MeshPhongMaterial({ 
+        color: geDarkPurple,
+        specular: 0x444444,
+        shininess: 40
+      });
+      const controlPanel = new THREE.Mesh(panelGeometry, panelMaterial);
+      controlPanel.position.set(0, -1, 3);
+      controlPanel.rotation.x = -Math.PI / 6;
+      controlPanel.castShadow = true;
+      controlPanel.receiveShadow = true;
+      consoleMesh.add(controlPanel);
+      
+      // Add knobs to the control panel
+      const knobGeometry = new THREE.CylinderGeometry(0.6, 0.6, 0.3, 32);
+      const knobMaterial = new THREE.MeshPhongMaterial({ 
+        color: gePurple,
+        specular: 0x888888,
+        shininess: 100
+      });
+      
+      // Position knobs
+      const knobPositions = [
+        [-6, -1, 3.5],
+        [-3, -1, 3.5],
+        [0, -1, 3.5],
+        [3, -1, 3.5],
+        [6, -1, 3.5]
+      ];
+      
+      knobPositions.forEach((pos, index) => {
+        const knob = new THREE.Mesh(knobGeometry, knobMaterial);
+        knob.position.set(pos[0], pos[1], pos[2]);
+        knob.rotation.x = -Math.PI / 6;
+        knob.castShadow = true;
+        consoleMesh.add(knob);
+        
+        // Add knob indicator
+        const indicatorGeometry = new THREE.BoxGeometry(0.1, 0.05, 0.6);
+        const indicatorMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const indicator = new THREE.Mesh(indicatorGeometry, indicatorMaterial);
+        indicator.position.set(0, 0.15, 0);
+        knob.add(indicator);
+      });
+      
+      // Control buttons
+      const buttonGeometry = new THREE.BoxGeometry(1, 0.5, 1);
+      const buttonMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0x444444,
+        specular: 0x888888,
+        shininess: 100
+      });
+      
+      // Add rows of buttons
+      for (let row = 0; row < 2; row++) {
+        for (let col = 0; col < 5; col++) {
+          const button = new THREE.Mesh(buttonGeometry, buttonMaterial);
+          button.position.set(-6 + col * 3, -3, 3.5 - row * 1.5);
+          button.rotation.x = -Math.PI / 6;
+          button.castShadow = true;
+          consoleMesh.add(button);
+        }
+      }
+      
+      // Trackball/trackpad
+      const trackballGeometry = new THREE.SphereGeometry(1.2, 32, 32);
+      const trackballMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0x222222,
+        specular: 0xffffff,
+        shininess: 120
+      });
+      const trackball = new THREE.Mesh(trackballGeometry, trackballMaterial);
+      trackball.position.set(8, -2, 4);
+      trackball.rotation.x = -Math.PI / 6;
+      trackball.castShadow = true;
+      consoleMesh.add(trackball);
+      
+      // GE Logo
+      const logoGeometry = new THREE.PlaneGeometry(4, 1);
+      const logoTexture = new THREE.TextureLoader().load('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAAAyCAYAAAAZUZThAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyVpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDYuMC1jMDAyIDc5LjE2NDQ2MCwgMjAyMC8wNS8xMi0xNjowNDoxNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIDIxLjIgKE1hY2ludG9zaCkiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6NkJBNTI1MTIwRUFGMTFFQjk0QkJFNTQ1OUVENzZCNEIiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6NkJBNTI1MTMwRUFGMTFFQjk0QkJFNTQ1OUVENzZCNEIiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDo2QkE1MjUxMDBFQUYxMUVCOTRCQkU1NDU5RUQ3NkI0QiIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDo2QkE1MjUxMTBFQUYxMUVCOTRCQkU1NDU5RUQ3NkI0QiIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/Pu4HGwsAAAoASURBVHja7FwNjBVFGd57795x9+7OAvK3BIEgIMrPiZZKrWhAUFQUIQQTGg0YSYixCbGJMTWoqZhUYiIakPiTGIMKRgkKVkQxUQ8xnCCHIBbwDrk77e7dz93bvb27nb3dvcfMZmd2dnZmZ29n73buku+S97id+eb7m/nm+775vllRURRwvTEGcDPgVsDXAIMAHwYcBJwB7AW8FFPnWYBWwA2AuRGf6wQ0A14CvB7wmWOTlRVRNLrpN99zE+BBwC/H/KZHw/cjeN/PGwDPuAl22jYNnEVdxQc0uAGj4CPK61FYbyXHDoCrXdg4b03Hu3xGfxZws8BnWmPquhl+/1nA5YDZjHUkuAT4UPTZJ4CXAFalqNMPuBlQCxgLKGEt5yRgF2A/c76b15LghUSSyvg9Gv+3gCNxFfFb59hNsTYObLLrXORkCVeYGYGfH13d35TXNm/2LBE6Ozstube1tQE6pDLuVfB+MkWVBwGfDPm8HlAG+IzDSW4wvj+B8JIkHkW4n9BZXEQNcHuALbmV9lnHnEZQzCnATCfbFLHRTZK8ht85kKJxaFTCRiqJfN8DCDT8VXhbk6TeSYx1Y4fYkCBtZhQXwxGMpGh7wckWJOcI5CqO5XlrW1tbrxN8/fXXwcyZM+G6dbiNOYfuPJ0h/Uq6bQKfr4iweIKDOx9JCF7bDZiOjSEOj1rqKTMGqWQa5hbgR4BvA75EX/R3wM8A30+4OEP4Dn0xDq8FvAj4RcIHagB3x3z+BnYMEyNs4XWYz2P8TbqfNp0EqePcvn17m9/vB/PnzwdPPvkkKC0tha6uLjB8+HBw/PhxJVFZSUkJGDQILQomY3lLQgezDY8kCVbjdmqV4cz7OODF0BpnTLfdYBvVCBcwO6BHE2Y9oiKiA2IkUeNS9LqOGfXVDlMuAR6BX5wSe2iHsFhxLXK28TsAOwB/YBjWWsAqwFGMMgrdHMxWcr2NxrVP9JnHGb9NmLcG8Aw+k4z3CxkdHLOh6eLEiROdra2t4NChQ+DGG28Era2t4JVXXgEzZswAb731lvLII4+ARYsWgePHjytXXnmlMmbMmLTqpVHnLxOuh0QCOeYCyB2ANwHGA+rY2cjBySxhSLK1g36gI2TS6MXZjpOxDe82DKtTuEsKY70W+uN7AX4C+Dn8o1iBf1QQR+r5YHqeGWASoBlwLOJEFyCnF+K7lwEvIzSc0+O0KenQ/xgeJzPPvYh53kw8Vqf3kMQ9jAWcE8axULw6TS2QpErS2dmJOTYYOXIk2Lx5M9iwYQO4/vrrlbq6OjBx4kSlrq5OYzKhQ0YM6sRWbgRcwqwbRJxdbsPnhpHI/GgxoZS2tQXftaR4hwD4AOAY3tJgCf7j6pTDjf+NMX6c4tkPJHyGdAxL0pQgLMmKndgfYhzDKqM8w8JnrBOsOZrxWSi2KwwjTVPnLN3bMWmv5YZd7D08PGUWoEdjLFrEPKNzfgWPY/nnPgY4gBnmHMQ8ZhY3AQ4A/j2G3dXOmJsT0fYa0mGQNtN3eTBOADyWsGMmQfjZgAOYXZrNnNhKGGWPEZD2MEFyh2MKFSxI+O5tMZ/3W/3IZ7COQ2jCR9iJhGgxfZtRZNvr1clgn7Hk+3OCzqcRd9iIy24cVn6IHePSxeXkLCdJM/cxcW9UEzLT0l6IhSQLcS2g0tQSPiLLsVwEGMosK38cYjpLTXG4ESNGaAMGDAAej0fxer2gtLRUKSsrU8rLyxWv16v5fD6lsrJSGTZsmFZRUYGXcxpVjkdEwuT3PETPvxlwYYhzxWEb1XRcQEeXlZvnfNxBQO9vosJrEWJrILYhWYKbg/+h26Sv0O/1YbnD+Fl8LL0pRGflTI2wFW+Ecw8jOIHVQJVh5xXELWHJI6v3Zp1h4pDkItoqJn/Ckls24gZcskzJJj1oVeZzc5yxZAn24UWFbOITdCCWGSFwSHAVxrJh4wQF2HFOM50V1pYJxD5RjUe2qFJA3LO9m9eS4EbiPLY5SYPfCc0T6Sw2YEaXyPshCzK7sYNJE6xMeYpT1Mj76HX0XNxoEnFQPmQmiG/jVu25gO/sxVwMYvucpK4eDNwfxKCfdcM9jIE2OTxIj1q6IIMY2g2oQE0wNcK8o5gm6C52ZDpILMWDpRzrTQ9GxxNJ6jsQk9hvVyR0ItY7fUz7rKDIqgQRaUvHDWInZw8q3eoMNfxQJyVJltDsEllsgf8Hjcas3WlJ0uuEJiXQcpgxcDCDkfURHZcuK9gIz+X9yvJZH5HlVmfnAj2QJHYgiZZJklvtQZLE6UBcONFCYlwE1a8xFLZLHJIYzrMtA52t2yJJZL1qDtslsVCS6CGnX4hhL2g4bnZ2TRLZLiRJBfCVFDkGcQ7q5qRo0O1BklhNkrzM5EYcC5Ek9kySLKLLgSSx1KLcJrtyOJkk1UYw2mGXKLdbcMb1ZJLE9gzb2e0kyRJJCilQz+F1ksSOLzXEzQ6xO5LcJtvHSRI7JUkWHVS6JInCwYnaC70zzbNtgiSTOD2XEyRJvM8GG+BhXuQkieNITpLYrCTh9EX7C+m0SXFOksQ5SSLL/YpFkiSakySxT5LEdhwoIy8dkP11ksT2JUksdKYwmUQ5SRInliTxLbK9M0ISJ0ms35XkJElcWJLEFoN95CRJnJMksbDgnJMkTiBJHF+SOLtEtrfIZvsViyRJdE6S2OskiWy3wfYLq8lJktjJJEm8i2xvtyRJTpLEXidJZDvnm3OSJIZ6PfSiYDcnie0jTh+RRLbTB3eSJLEkSWynk0S2MzXvJElic5JE9jpJIttps5wkcV7mbZIVObttXhFsn3B6QZsksR3F6eHvVS2SJHaSJIlsX/XNSZLE+aJEtiVJZPsKiZPvJPFD5n3N7CNJkkDOSZLYw3GSyPYl3T4jSWLnJEndThLY/Z0kiXOSJPYcSWSbv5PEufhOktgZSRIYziVJnJMkCT21MnS2PUmSOLeuZaOTJHYsSeKcJEmdkySOLEli+JdWUPzfY01oGb36z2aBmfKfJSQ25kQpvvsQc3pkpDUHLwAUXzd9OM7yD5WzPOzAn5XSddwD/xDNcWaE/jPgXVaUJDpS8P7/e5R9GwG7AX+ZA9V2OhbhbNvO3nBOksR/n5NxkkQw/ifAAPWRVoA8bYWIAAAAAElFTkSuQmCC');
+      const logoMaterial = new THREE.MeshBasicMaterial({ 
+        map: logoTexture,
+        transparent: true
+      });
+      const logo = new THREE.Mesh(logoGeometry, logoMaterial);
+      logo.position.set(0, 14, 0.3);
+      consoleMesh.add(logo);
+      
+      // Add probe holder
+      const holderGeometry = new THREE.CylinderGeometry(1.2, 1.2, 4, 16);
+      const holderMaterial = new THREE.MeshPhongMaterial({ color: geGray });
+      const probeHolder = new THREE.Mesh(holderGeometry, holderMaterial);
+      probeHolder.position.set(-12, -2, 0);
+      probeHolder.rotation.x = Math.PI / 2;
+      probeHolder.castShadow = true;
+      probeHolder.receiveShadow = true;
+      consoleMesh.add(probeHolder);
+      
+      // Add floor
+      const floorGeometry = new THREE.PlaneGeometry(100, 100);
+      const floorMaterial = new THREE.MeshPhongMaterial({
+        color: 0x333333,
+        side: THREE.DoubleSide
+      });
+      const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = -9.5;
+      floor.receiveShadow = true;
+      scene.add(floor);
+      
+      // Position the console
+      consoleMesh.position.set(0, 0, 0);
+      
+      // Add to scene
+      scene.add(consoleMesh);
+    }
+    
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+    
+    function animate() {
+      requestAnimationFrame(animate);
+      
+      // Update screen texture if game has started
+      if (gameStarted) {
+        screenMaterial.map.needsUpdate = true;
+        updateKnobRotations();
+      }
+      
+      // Rotate console slightly for visual appeal before game starts
+      if (!gameStarted) {
+        consoleMesh.rotation.y = Math.sin(Date.now() * 0.0005) * 0.2;
+      } else {
+        // Allow user to rotate console slightly during gameplay
+        if (mouseDown) {
+          consoleMesh.rotation.y += (mouseX - window.innerWidth / 2) * 0.0001;
+          consoleMesh.rotation.x = Math.max(-0.1, Math.min(0.1, consoleMesh.rotation.x + (mouseY - window.innerHeight / 2) * 0.0001));
+        }
+      }
+      
+      renderer.render(scene, camera);
+    }
+    
+    function updateKnobRotations() {
+      // Update visual rotation of knob indicators based on values
+      document.getElementById('depthIndicator').style.transform = `rotate(${(depth - 5) * 12}deg)`;
+      document.getElementById('gainIndicator').style.transform = `rotate(${(gain - 10) * 4}deg)`;
+      document.getElementById('focusIndicator').style.transform = `rotate(${(focus - 1) * 24}deg)`;
+    }
+    
+    function startGame() {
+      // Hide splash screen
+      splashScreen.style.opacity = 0;
+      setTimeout(() => { splashScreen.style.display = 'none'; }, 800);
+      
+      // Show game UI
+      gameUI.style.opacity = 1;
+      
+      // Mark game as started
+      gameStarted = true;
+      
+      // Initialize display
+      drawUltrasoundImage();
+      
+      // Select first case
+      selectRandomTarget();
+    }
+    
+    function setupEventListeners() {
+      // Probe selection
+      document.querySelectorAll('.probe-btn').forEach(button => {
+        button.addEventListener('click', () => {
+          document.querySelectorAll('.probe-btn').forEach(b => b.classList.remove('active'));
+          button.classList.add('active');
+          currentProbe = button.getAttribute('data-probe');
+          
+          // Play probe change sound
+          const audio = new Audio();
+          audio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAASAAAeMwAUFBQUFCgUFBQUFDMzMzMzM0dHR0dHR1xHR0dHR3d3d3d3d4+Pj4+Pj6Ojo6Ojo7i4uLi4uMzMzMzMzOHh4eHh4fX19fX19QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/7kGQAAANUMEoFPeACNQzInKe4AEcRmyeU9YCI3jNg8prgARtXl/+xJsSI7kQJGPL/JCNL/6GaIaffjRNeNMzuZE+N0ETWmPwKLQxIaMjJEeONMAZG0XIXng+SCCwKIaMYuCCGaUmm7ggdytV6q//kevqv8jeogpnMZmYz5lsxf+W7Vf//U5mc0IEis9mwA0+lC0BludJKttJFQQbIr/4jUdGP/7kmQSgAI2ZtXvPWACNkYp/MKNKEbFMUfMPQAI3hWn+YeoBIalu34kkJxQDGZPkQHJxOBhDKi0Mnh9C7LH/hTzthQzTgfSgSR39kYF8FuzHXdZJPrnqWTLGRgAJG0QbBMlJWsCIu5Qt24RpBFVewJDOp/5f/5L5/u855v5JHRBULoAAAAEjIEw5J//hOKpo5xSH///8CRDggIGAgQGQ5Kf/rggPhrQoC44KCpv/1DP/MiOpJ8K7KBStEVZRUSVMATKpBgTrtQ0FLlUuy/gKVUxBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqq//uSZEWAEk5ZyPMuQAI3JQjeZGiwRylXJ4w84AjbkKJ5kyLAqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqr/+5JkQI/wAABpAAAACAAANIAAAAQAAAaQAAAAgAAA0gAAABKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqo=';
+          audio.play();
+          
+          showNotification(`Sonda ${getProbeDisplayName(currentProbe)} attivata`);
+          drawUltrasoundImage();
+        });
+      });
+      
+      // Scan mode selection
+      document.querySelectorAll('.scan-btn').forEach(button => {
+        button.addEventListener('click', () => {
+          document.querySelectorAll('.scan-btn').forEach(b => b.classList.remove('active'));
+          button.classList.add('active');
+          currentMode = button.getAttribute('data-mode');
+          drawUltrasoundImage();
+        });
+      });
+      
+      // Control knobs
+      document.getElementById('depthKnob').addEventListener('click', () => {
+        depth = (depth % 25) + 5;
+        document.getElementById('depthValue').innerText = `${depth} cm`;
+        drawUltrasoundImage();
+      });
+      
+      document.getElementById('gainKnob').addEventListener('click', () => {
+        gain = (gain % 90) + 10;
+        document.getElementById('gainValue').innerText = `${gain}%`;
+        drawUltrasoundImage();
+      });
+      
+      document.getElementById('focusKnob').addEventListener('click', () => {
+        focus = (focus % 15) + 1;
+        document.getElementById('focusValue').innerText = `${focus} cm`;
+        drawUltrasoundImage();
+      });
+      
+      // Scan button
+      document.getElementById('scanButton').addEventListener('click', () => {
+        checkScan();
+      });
+      
+      // Mouse controls for console rotation
+      window.addEventListener('mousedown', () => {
+        mouseDown = true;
+      });
+      
+      window.addEventListener('mouseup', () => {
+        mouseDown = false;
+      });
+      
+      window.addEventListener('mousemove', (e) => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+      });
+      
+      // Tooltips
+      const controls = document.querySelectorAll('.control-knob, .probe-btn, .scan-btn');
+      const tooltip = document.getElementById('tooltip');
+      
+      controls.forEach(control => {
+        control.addEventListener('mouseover', (e) => {
+          let text = '';
+          if (control.classList.contains('probe-btn')) {
+            const probeType = control.getAttribute('data-probe');
+            switch(probeType) {
+              case 'linear':
+                text = 'Sonda Lineare: ottima per strutture superficiali come muscoli, tendini e vasi';
+                break;
+              case 'convex':
+                text = 'Sonda Convex: ideale per esami addominali e pelvici profondi';
+                break;
+              case 'endocavity':
+                text = 'Sonda Endocavitaria: per esami transvaginali e transrettali';
+                break;
+              case 'phased':
+                text = 'Sonda Phased Array: perfetta per esami cardiaci e intercostali';
+                break;
+              case 'volumetric':
+                text = 'Sonda Volumetrica 3D/4D: per acquisizioni tridimensionali, ideale in ostetricia';
+                break;
+            }
+          } else if (control.classList.contains('scan-btn')) {
+            const mode = control.getAttribute('data-mode');
+            switch(mode) {
+              case 'bmode':
+                text = 'B-Mode: modalità standard in scala di grigi';
+                break;
+              case 'cfm':
+                text = 'Color Doppler: visualizza flussi sanguigni a colori';
+                break;
+              case 'doppler':
+                text = 'Doppler Spettrale: analizza velocità e direzione del flusso';
+                break;
+              case '3d':
+                text = '3D/4D: acquisizione volumetrica (solo con sonda volumetrica)';
+                break;
+            }
+          } else if (control.id === 'depthKnob') {
+            text = 'Profondità: regola la profondità di visualizzazione';
+          } else if (control.id === 'gainKnob') {
+            text = 'Guadagno: regola la luminosità generale dell\'immagine';
+          } else if (control.id === 'focusKnob') {
+            text = 'Focus: regola il punto di massima risoluzione dell\'immagine';
+          }
+          
+          tooltip.innerText = text;
+          tooltip.style.left = (e.pageX + 10) + 'px';
+          tooltip.style.top = (e.pageY + 10) + 'px';
+          tooltip.style.opacity = 1;
+        });
+        
+        control.addEventListener('mouseout', () => {
+          tooltip.style.opacity = 0;
+        });
+      });
+    }
+    
+    function getProbeDisplayName(probeKey) {
+      const probeNames = {
+        'linear': 'Lineare',
+        'convex': 'Convex',
+        'endocavity': 'Endocavitaria',
+        'phased': 'Phased Array',
+        'volumetric': 'Volumetrica 3D/4D'
+      };
+      return probeNames[probeKey] || probeKey;
+    }
+    
+    // Ultrasound image generation
+    function drawUltrasoundImage() {
+      // Clear canvas
+      displayContext.fillStyle = 'black';
+      displayContext.fillRect(0, 0, displayCanvas.width, displayCanvas.height);
+      
+      // Draw based on probe type and mode
+      if (currentMode === 'bmode') {
+        drawBMode();
+      } else if (currentMode === 'cfm') {
+        drawColorMode();
+      } else if (currentMode === 'doppler') {
+        drawDopplerMode();
+      } else if (currentMode === '3d') {
+        draw3DMode();
+      }
+      
+      // Draw probe-specific overlay
+      drawProbeOverlay();
+      
+      // Add GE logo and info text
+      displayContext.font = '20px Arial';
+      displayContext.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      displayContext.textAlign = 'right';
+      displayContext.fillText('GE Healthcare', displayCanvas.width - 20, 30);
+      
+      // Add parameters display
+      displayContext.font = '14px Arial';
+      displayContext.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      displayContext.textAlign = 'left';
+      displayContext.fillText(`Depth: ${depth}cm | Gain: ${gain}% | MI: 0.7 | TI: 0.3`, 20, displayCanvas.height - 20);
+      
+      // Add score
+      displayContext.font = '16px Arial';
+      displayContext.fillStyle = 'rgba(107, 55, 139, 0.9)';
+      displayContext.textAlign = 'left';
+      displayContext.fillText(`Score: ${score}`, 20, 30);
+    }
+    
+    function drawBMode() {
+      // Base grayscale image with speckle noise
+      const imageData = displayContext.createImageData(displayCanvas.width, displayCanvas.height);
+      const data = imageData.data;
+      
+      for (let i = 0; i < data.length; i += 4) {
+        if (Math.random() > 0.99) {
+          // Speckle
+          const val = Math.floor(Math.random() * 100) + 155;
+          data[i] = data[i + 1] = data[i + 2] = val;
+          data[i + 3] = 255; // alpha
+        } else {
+          // Background noise - gain affects noise level
+          const noiseVal = Math.floor(Math.random() * gain / 5);
+          data[i] = data[i + 1] = data[i + 2] = noiseVal;
+          data[i + 3] = 255; // alpha
+        }
+      }
+      
+      displayContext.putImageData(imageData, 0, 0);
+      
+      // Add some tissue-like structures based on probe
+      displayContext.fillStyle = 'rgba(255, 255, 255, 0.1)';
+      
+      // Draw target if using correct probe
+      if (currentTarget && currentProbe === currentTarget.probe) {
+        drawTarget();
+      }
+    }
+    
+    function drawTarget() {
+      // Draw a recognizable structure based on current target
+      displayContext.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      
+      switch(currentTarget.name) {
+        case 'Calcolo Renale':
+          // Draw kidney outline and bright spot for stone
+          displayContext.beginPath();
+          displayContext.ellipse(displayCanvas.width/2, displayCanvas.height/2, 80, 50, 0, 0, Math.PI * 2);
+          displayContext.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+          displayContext.lineWidth = 2;
+          displayContext.stroke();
+          
+          // Add kidney texture
+          for (let i = 0; i < 100; i++) {
+            const x = displayCanvas.width/2 + (Math.random() - 0.5) * 150;
+            const y = displayCanvas.height/2 + (Math.random() - 0.5) * 80;
+            const size = 1 + Math.random() * 2;
+            
+            displayContext.fillStyle = `rgba(255, 255, 255, ${0.1 + Math.random() * 0.2})`;
+            displayContext.beginPath();
+            displayContext.arc(x, y, size, 0, Math.PI * 2);
+            displayContext.fill();
+          }
+          
+          // Bright stone
+          displayContext.fillStyle = 'white';
+          displayContext.beginPath();
+          displayContext.arc(displayCanvas.width/2 + 20, displayCanvas.height/2 - 10, 5, 0, Math.PI * 2);
+          displayContext.fill();
+          
+          // Shadow behind stone
+          displayContext.fillStyle = 'black';
+          displayContext.beginPath();
+          displayContext.moveTo(displayCanvas.width/2 + 23, displayCanvas.height/2 - 6);
+          displayContext.lineTo(displayCanvas.width/2 + 40, displayCanvas.height/2 + 40);
+          displayContext.lineTo(displayCanvas.width/2 + 6, displayCanvas.height/2 + 40);
+          displayContext.closePath();
+          displayContext.fill();
+          break;
+          
+        case 'Stenosi Carotidea':
+          // Draw vessel with narrowing
+          displayContext.lineWidth = 15;
+          displayContext.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+          displayContext.beginPath();
+          displayContext.moveTo(displayCanvas.width/2 - 100, displayCanvas.height/2);
+          displayContext.lineTo(displayCanvas.width/2 - 50, displayCanvas.height/2);
+          displayContext.lineTo(displayCanvas.width/2 - 30, displayCanvas.height/2 - 10);
+          displayContext.lineTo(displayCanvas.width/2 - 20, displayCanvas.height/2);
+          displayContext.lineTo(displayCanvas.width/2 + 100, displayCanvas.height/2);
+          displayContext.stroke();
+          
+          displayContext.lineWidth = 5;
+          displayContext.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+          displayContext.beginPath();
+          displayContext.moveTo(displayCanvas.width/2 - 100, displayCanvas.height/2);
+          displayContext.lineTo(displayCanvas.width/2 - 50, displayCanvas.height/2);
+          displayContext.lineTo(displayCanvas.width/2 - 30, displayCanvas.height/2 - 10);
+          displayContext.lineTo(displayCanvas.width/2 - 20, displayCanvas.height/2);
+          displayContext.lineTo(displayCanvas.width/2 + 100, displayCanvas.height/2);
+          displayContext.stroke();
+          
+          // Add plaque
+          displayContext.fillStyle = 'rgba(200, 200, 200, 0.8)';
+          displayContext.beginPath();
+          displayContext.arc(displayCanvas.width/2 - 30, displayCanvas.height/2 - 5, 8, 0, Math.PI * 2);
+          displayContext.fill();
+          break;
+          
+        case 'Gravidanza 12w':
+          // Draw gestational sac and fetal pole
+          displayContext.beginPath();
+          displayContext.arc(displayCanvas.width/2, displayCanvas.height/2, 70, 0, Math.PI * 2);
+          displayContext.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+          displayContext.lineWidth = 2;
+          displayContext.stroke();
+          
+          displayContext.fillStyle = 'rgba(0, 0, 0, 0.7)';
+          displayContext.beginPath();
+          displayContext.arc(displayCanvas.width/2, displayCanvas.height/2, 65, 0, Math.PI * 2);
+          displayContext.fill();
+          
+          // Fetal pole
+          displayContext.fillStyle = 'rgba(200, 200, 200, 0.7)';
+          displayContext.beginPath();
+          displayContext.ellipse(displayCanvas.width/2 - 20, displayCanvas.height/2, 25, 15, Math.PI/4, 0, Math.PI * 2);
+          displayContext.fill();
+          
+          // Heartbeat indication (blinking)
+          if (Date.now() % 1000 < 500) {
+            displayContext.beginPath();
+            displayContext.arc(displayCanvas.width/2 - 20, displayCanvas.height/2, 5, 0, Math.PI * 2);
+            displayContext.fillStyle = 'white';
+            displayContext.fill();
+          }
+          break;
+          
+        case 'Insufficienza Mitralica':
+          // Draw heart chambers
+          displayContext.beginPath();
+          displayContext.ellipse(displayCanvas.width/2 - 50, displayCanvas.height/2, 60, 80, 0, 0, Math.PI * 2);
+          displayContext.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+          displayContext.lineWidth = 2;
+          displayContext.stroke();
+          
+          displayContext.beginPath();
+          displayContext.ellipse(displayCanvas.width/2 + 50, displayCanvas.height/2, 60, 80, 0, 0, Math.PI * 2);
+          displayContext.stroke();
+          
+          // Valve in between
+          displayContext.beginPath();
+          displayContext.moveTo(displayCanvas.width/2 - 10, displayCanvas.height/2 - 20);
+          displayContext.lineTo(displayCanvas.width/2 + 10, displayCanvas.height/2 + 20);
+          displayContext.moveTo(displayCanvas.width/2 + 10, displayCanvas.height/2 - 20);
+          displayContext.lineTo(displayCanvas.width/2 - 10, displayCanvas.height/2 + 20);
+          displayContext.strokeStyle = 'white';
+          displayContext.lineWidth = 3;
+          displayContext.stroke();
+          
+          // Chamber walls
+          for (let i = 0; i < 20; i++) {
+            const angle = i * Math.PI / 10;
+            const radius = 60;
+            const x1 = displayCanvas.width/2 - 50 + Math.cos(angle) * radius;
+            const y1 = displayCanvas.height/2 + Math.sin(angle) * radius * 1.3;
+            const x2 = displayCanvas.width/2 + 50 + Math.cos(angle + Math.PI) * radius;
+            const y2 = displayCanvas.height/2 + Math.sin(angle + Math.PI) * radius * 1.3;
+            
+            displayContext.fillStyle = `rgba(255, 255, 255, ${0.1 + Math.random() * 0.2})`;
+            displayContext.beginPath();
+            displayContext.arc(x1, y1, 2, 0, Math.PI * 2);
+            displayContext.arc(x2, y2, 2, 0, Math.PI * 2);
+            displayContext.fill();
+          }
+          break;
+          
+        case 'Feto 3D':
+          if (currentMode === '3d' && currentProbe === 'volumetric') {
+            // 3D fetus is handled in the 3D mode
+          } else {
+            // Simplified 2D view of fetus
+            displayContext.fillStyle = 'rgba(200, 200, 200, 0.8)';
+            displayContext.beginPath();
+            displayContext.ellipse(displayCanvas.width/2, displayCanvas.height/2 - 20, 60, 70, 0, 0, Math.PI * 2);
+            displayContext.fill();
+            
+            // Face features
+            displayContext.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            displayContext.beginPath();
+            displayContext.arc(displayCanvas.width/2 - 15, displayCanvas.height/2 - 30, 5, 0, Math.PI * 2);
+            displayContext.arc(displayCanvas.width/2 + 15, displayCanvas.height/2 - 30, 5, 0, Math.PI * 2);
+            displayContext.fill();
+            
+            displayContext.beginPath();
+            displayContext.arc(displayCanvas.width/2, displayCanvas.height/2 - 10, 10, 0, Math.PI, false);
+            displayContext.stroke();
+          }
+          break;
+          
+        case 'Tiroide Nodulare':
+          // Draw thyroid lobes
+          displayContext.beginPath();
+          displayContext.ellipse(displayCanvas.width/2 - 40, displayCanvas.height/2, 30, 50, 0, 0, Math.PI * 2);
+          displayContext.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+          displayContext.lineWidth = 2;
+          displayContext.stroke();
+          
+          displayContext.beginPath();
+          displayContext.ellipse(displayCanvas.width/2 + 40, displayCanvas.height/2, 30, 50, 0, 0, Math.PI * 2);
+          displayContext.stroke();
+          
+          // Isthmus connecting lobes
+          displayContext.beginPath();
+          displayContext.moveTo(displayCanvas.width/2 - 25, displayCanvas.height/2);
+          displayContext.lineTo(displayCanvas.width/2 + 25, displayCanvas.height/2);
+          displayContext.lineWidth = 10;
+          displayContext.stroke();
+          
+          // Nodule
+          displayContext.beginPath();
+          displayContext.arc(displayCanvas.width/2 - 30, displayCanvas.height/2 - 15, 15, 0, Math.PI * 2);
+          displayContext.fillStyle = 'rgba(0, 0, 0, 0.7)';
+          displayContext.fill();
+          displayContext.lineWidth = 1;
+          displayContext.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+          displayContext.stroke();
+          
+          // Halo sign
+          displayContext.beginPath();
+          displayContext.arc(displayCanvas.width/2 - 30, displayCanvas.height/2 - 15, 18, 0, Math.PI * 2);
+          displayContext.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+          displayContext.stroke();
+          break;
+          
+        case 'Cirrosi Epatica':
+          // Liver outline with nodular surface
+          displayContext.beginPath();
+          let startX = displayCanvas.width/2 - 150;
+          let startY = displayCanvas.height/2 - 30;
+          displayContext.moveTo(startX, startY);
+          
+          for (let i = 0; i < 10; i++) {
+            startX += 30;
+            startY += (Math.random() - 0.5) * 20;
+            displayContext.lineTo(startX, startY);
+          }
+          
+          for (let i = 0; i < 5; i++) {
+            startX -= 10;
+            startY += 20 + (Math.random() - 0.5) * 10;
+            displayContext.lineTo(startX, startY);
+          }
+          
+          for (let i = 0; i < 10; i++) {
+            startX -= 30;
+            startY -= (Math.random() - 0.5) * 20;
+            displayContext.lineTo(startX, startY);
+          }
+          
+          displayContext.closePath();
+          displayContext.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+          displayContext.lineWidth = 2;
+          displayContext.stroke();
+          displayContext.fillStyle = 'rgba(200, 200, 200, 0.1)';
+          displayContext.fill();
+          
+          // Coarse echotexture
+          for (let i = 0; i < 200; i++) {
+            const x = displayCanvas.width/2 + (Math.random() - 0.5) * 250;
+            const y = displayCanvas.height/2 + (Math.random() - 0.5) * 150;
+            const size = 1 + Math.random() * 4;
+            
+            displayContext.fillStyle = `rgba(255, 255, 255, ${0.1 + Math.random() * 0.3})`;
+            displayContext.beginPath();
+            displayContext.arc(x, y, size, 0, Math.PI * 2);
+            displayContext.fill();
+          }
+          break;
+          
+        case 'Aorta Addominale':
+          // Aorta as circular structure
+          displayContext.beginPath();
+          displayContext.arc(displayCanvas.width/2, displayCanvas.height/2, 30, 0, Math.PI * 2);
+          displayContext.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+          displayContext.lineWidth = 2;
+          displayContext.stroke();
+          
+          // Vessel wall
+          displayContext.beginPath();
+          displayContext.arc(displayCanvas.width/2, displayCanvas.height/2, 33, 0, Math.PI * 2);
+          displayContext.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+          displayContext.stroke();
+          
+          // Anechoic lumen
+          displayContext.fillStyle = 'rgba(0, 0, 0, 0.9)';
+          displayContext.beginPath();
+          displayContext.arc(displayCanvas.width/2, displayCanvas.height/2, 30, 0, Math.PI * 2);
+          displayContext.fill();
+          
+          // Pulsation effect
+          if (Date.now() % 1000 < 100) {
+            displayContext.beginPath();
+            displayContext.arc(displayCanvas.width/2, displayCanvas.height/2, 32, 0, Math.PI * 2);
+            displayContext.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+            displayContext.lineWidth = 3;
+            displayContext.stroke();
+          }
+          break;
+          
+        case 'TVP Femorale':
+          // Circular vein with thrombus
+          displayContext.beginPath();
+          displayContext.arc(displayCanvas.width/2, displayCanvas.height/2, 35, 0, Math.PI * 2);
+          displayContext.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+          displayContext.lineWidth = 2;
+          displayContext.stroke();
+          
+          // Echogenic thrombus inside
+          displayContext.fillStyle = 'rgba(180, 180, 180, 0.5)';
+          displayContext.beginPath();
+          displayContext.arc(displayCanvas.width/2, displayCanvas.height/2, 30, 0, Math.PI * 2);
+          displayContext.fill();
+          
+          // Non-compressibility
+          displayContext.fillStyle = 'rgba(200, 200, 200, 0.2)';
+          displayContext.beginPath();
+          displayContext.rect(displayCanvas.width/2 - 60, displayCanvas.height/2 - 40, 120, 80);
+          displayContext.fill();
+          
+          // Adjacent artery
+          displayContext.beginPath();
+          displayContext.arc(displayCanvas.width/2 - 50, displayCanvas.height/2, 20, 0, Math.PI * 2);
+          displayContext.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+          displayContext.stroke();
+          
+          displayContext.fillStyle = 'rgba(0, 0, 0, 0.9)';
+          displayContext.beginPath();
+          displayContext.arc(displayCanvas.width/2 - 50, displayCanvas.height/2, 18, 0, Math.PI * 2);
+          displayContext.fill();
+          break;
+          
+        case 'Versamento Pleurico':
+          // Pleural line
+          displayContext.beginPath();
+          displayContext.moveTo(displayCanvas.width/2 - 100, displayCanvas.height/2 - 50);
+          displayContext.lineTo(displayCanvas.width/2 + 100, displayCanvas.height/2 - 50);
+          displayContext.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+          displayContext.lineWidth = 2;
+          displayContext.stroke();
+          
+          // Lung tissue
+          for (let i = 0; i < 80; i++) {
+            const x = displayCanvas.width/2 + (Math.random() - 0.5) * 200;
+            const y = displayCanvas.height/2 - 70 - Math.random() * 80;
+            
+            displayContext.beginPath();
+            displayContext.moveTo(x, y);
+            displayContext.lineTo(x + 8, y);
+            displayContext.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            displayContext.lineWidth = 1;
+            displayContext.stroke();
+          }
+          
+          // Anechoic pleural effusion
+          displayContext.fillStyle = 'rgba(0, 0, 0, 0.9)';
+          displayContext.beginPath();
+          displayContext.rect(displayCanvas.width/2 - 100, displayCanvas.height/2 - 50, 200, 80);
+          displayContext.fill();
+          
+          // Internal echoes
+          for (let i = 0; i < 15; i++) {
+            const x = displayCanvas.width/2 + (Math.random() - 0.5) * 180;
+            const y = displayCanvas.height/2 - 30 + Math.random() * 50;
+            
+            displayContext.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            displayContext.beginPath();
+            displayContext.arc(x, y, 1, 0, Math.PI * 2);
+            displayContext.fill();
+          }
+          break;
+      }
+    }
+    
+    function drawColorMode() {
+      // First draw B-mode as background
+      drawBMode();
+      
+      // Overlay color data for blood flow
+      if (currentTarget && currentProbe === currentTarget.probe) {
+        // Add color for blood flow
+        const gradient = displayContext.createLinearGradient(
+          displayCanvas.width/2 - 50, displayCanvas.height/2,
+          displayCanvas.width/2 + 50, displayCanvas.height/2
+        );
+        
+        // Red for flow toward, blue for flow away
+        gradient.addColorStop(0, 'rgba(255, 0, 0, 0.5)');
+        gradient.addColorStop(1, 'rgba(0, 0, 255, 0.5)');
+        
+        displayContext.fillStyle = gradient;
+        
+        switch(currentTarget.name) {
+          case 'Stenosi Carotidea':
+            // Show turbulent flow at stenosis
+            displayContext.beginPath();
+            displayContext.moveTo(displayCanvas.width/2 - 80, displayCanvas.height/2 - 15);
+            displayContext.lineTo(displayCanvas.width/2 + 80, displayCanvas.height/2 - 15);
+            displayContext.lineTo(displayCanvas.width/2 + 80, displayCanvas.height/2 + 15);
+            displayContext.lineTo(displayCanvas.width/2 - 80, displayCanvas.height/2 + 15);
+            displayContext.closePath();
+            displayContext.fill();
+            
+            // Aliasing at stenosis
+            displayContext.fillStyle = 'rgba(255, 255, 0, 0.7)';
+            displayContext.beginPath();
+            displayContext.arc(displayCanvas.width/2 - 25, displayCanvas.height/2, 10, 0, Math.PI * 2);
+            displayContext.fill();
+            break;
+            
+          case 'Insufficienza Mitralica':
+            // Regurgitation jet
+            displayContext.fillStyle = 'rgba(0, 0, 255, 0.7)';
+            displayContext.beginPath();
+            displayContext.moveTo(displayCanvas.width/2, displayCanvas.height/2);
+            displayContext.lineTo(displayCanvas.width/2 - 60, displayCanvas.height/2 - 40);
+            displayContext.lineTo(displayCanvas.width/2 - 50, displayCanvas.height/2);
+            displayContext.lineTo(displayCanvas.width/2 - 60, displayCanvas.height/2 + 40);
+            displayContext.closePath();
+            displayContext.fill();
+            break;
+            
+          case 'TVP Femorale':
+            // No flow in thrombosed vein
+            displayContext.beginPath();
+            displayContext.arc(displayCanvas.width/2 - 50, displayCanvas.height/2, 15, 0, Math.PI * 2);
+            displayContext.fillStyle = 'rgba(255, 0, 0, 0.5)';
+            displayContext.fill();
+            break;
+            
+          case 'Aorta Addominale':
+            // Pulsatile flow in aorta
+            displayContext.beginPath();
+            displayContext.arc(displayCanvas.width/2, displayCanvas.height/2, 25, 0, Math.PI * 2);
+            
+            // Pulsating color intensity
+            const intensity = (Math.sin(Date.now() * 0.005) + 1) / 2;
+            displayContext.fillStyle = `rgba(255, 0, 0, ${0.3 + intensity * 0.4})`;
+            displayContext.fill();
+            break;
+        }
+      }
+    }
+    
+    function drawDopplerMode() {
+      // Split screen - B-mode on left, Doppler on right
+      displayContext.fillStyle = 'black';
+      displayContext.fillRect(0, 0, displayCanvas.width, displayCanvas.height);
+      
+      // B-mode on left third
+      displayContext.save();
+      displayContext.beginPath();
+      displayContext.rect(0, 0, displayCanvas.width/3, displayCanvas.height);
+      displayContext.clip();
+      drawBMode();
+      displayContext.restore();
+      
+      // Doppler spectral display on right two-thirds
+      displayContext.fillStyle = 'rgb(20, 20, 20)';
+      displayContext.fillRect(displayCanvas.width/3, 0, displayCanvas.width*2/3, displayCanvas.height);
+      
+      // Draw spectral Doppler grid
+      displayContext.strokeStyle = 'rgba(50, 50, 50, 0.8)';
+      displayContext.lineWidth = 1;
+      
+      // Horizontal grid lines
+      for (let y = 0; y < displayCanvas.height; y += 20) {
+        displayContext.beginPath();
+        displayContext.moveTo(displayCanvas.width/3, y);
+        displayContext.lineTo(displayCanvas.width, y);
+        displayContext.stroke();
+      }
+      
+      // Vertical grid lines
+      for (let x = displayCanvas.width/3; x < displayCanvas.width; x += 30) {
+        displayContext.beginPath();
+        displayContext.moveTo(x, 0);
+        displayContext.lineTo(x, displayCanvas.height);
+        displayContext.stroke();
+      }
+      
+      // Baseline
+      displayContext.strokeStyle = 'rgba(100, 100, 100, 1)';
+      displayContext.lineWidth = 2;
+      displayContext.beginPath();
+      displayContext.moveTo(displayCanvas.width/3, displayCanvas.height/2);
+      displayContext.lineTo(displayCanvas.width, displayCanvas.height/2);
+      displayContext.stroke();
+      
+      // Draw a waveform
+      if (currentTarget && currentProbe === currentTarget.probe) {
+        displayContext.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+        displayContext.lineWidth = 2;
+        displayContext.beginPath();
+        
+        const startX = displayCanvas.width/3;
+        const centerY = displayCanvas.height/2;
+        
+        // Different waveforms for different targets
+        switch(currentTarget.name) {
+          case 'Stenosi Carotidea':
+            // High resistance waveform with turbulence
+            let x = startX;
+            displayContext.moveTo(x, centerY);
+            
+            while (x < displayCanvas.width) {
+              // Systolic peak
+              x += 15;
+              displayContext.lineTo(x, centerY - 80 - Math.random() * 20);
+              
+              // Turbulence
+              x += 10;
+              displayContext.lineTo(x, centerY - 60 + Math.random() * 40);
+              
+              // Down slope
+              x += 15;
+              displayContext.lineTo(x, centerY - 20);
+              
+              // Diastole
+              x += 40;
+              displayContext.lineTo(x, centerY - 10);
+              
+              // End of cycle
+              x += 20;
+              displayContext.lineTo(x, centerY);
+            }
+            break;
+            
+          case 'Insufficienza Mitralica':
+            // Regurgitation pattern
+            let xMit = startX;
+            displayContext.moveTo(xMit, centerY);
+            
+            while (xMit < displayCanvas.width) {
+              // Forward flow
+              xMit += 20;
+              displayContext.lineTo(xMit, centerY - 60);
+              
+              xMit += 15;
+              displayContext.lineTo(xMit, centerY - 20);
+              
+              // Regurgitation (below baseline)
+              xMit += 15;
+              displayContext.lineTo(xMit, centerY + 40);
+              
+              xMit += 30;
+              displayContext.lineTo(xMit, centerY);
+              
+              xMit += 20;
+            }
+            break;
+            
+          case 'TVP Femorale':
+            // No flow or minimal flow
+            let xTvp = startX;
+            displayContext.moveTo(xTvp, centerY);
+            
+            while (xTvp < displayCanvas.width) {
+              xTvp += 20;
+              displayContext.lineTo(xTvp, centerY - 10 + Math.random() * 20);
+            }
+            
+            // Highlight lack of flow with adjacent normal artery
+            displayContext.stroke();
+            displayContext.strokeStyle = 'rgba(255, 100, 100, 0.7)';
+            displayContext.beginPath();
+            let xArt = startX;
+            displayContext.moveTo(xArt, centerY - 100);
+            
+            while (xArt < displayCanvas.width) {
+              xArt += 20;
+              displayContext.lineTo(xArt, centerY - 150 - Math.random() * 20);
+              
+              xArt += 15;
+              displayContext.lineTo(xArt, centerY - 110);
+              
+              xArt += 40;
+              displayContext.lineTo(xArt, centerY - 100);
+              
+              xArt += 20;
+            }
+            break;
+            
+          case 'Aorta Addominale':
+            // Low resistance waveform
+            let xAorta = startX;
+            displayContext.moveTo(xAorta, centerY);
+            
+            while (xAorta < displayCanvas.width) {
+              // Systolic peak
+              xAorta += 20;
+              displayContext.lineTo(xAorta, centerY - 80);
+              
+              // Diastolic flow
+              xAorta += 15;
+              displayContext.lineTo(xAorta, centerY - 40);
+              
+              // End of cycle
+              xAorta += 40;
+              displayContext.lineTo(xAorta, centerY - 35);
+              
+              xAorta += 20;
+              displayContext.lineTo(xAorta, centerY);
+            }
+            break;
+            
+          default:
+            // Generic pulsatile flow
+            let xGen = startX;
+            displayContext.moveTo(xGen, centerY);
+            
+            while (xGen < displayCanvas.width) {
+              xGen += 20;
+              displayContext.lineTo(xGen, centerY - 50 - Math.random() * 20);
+              
+              xGen += 20;
+              displayContext.lineTo(xGen, centerY - 10);
+              
+              xGen += 60;
+              displayContext.lineTo(xGen, centerY);
+            }
+        }
+        
+        displayContext.stroke();
+      }
+    }
+    
+    function draw3DMode() {
+      // Only show realistic 3D for volumetric probe
+      if (currentProbe === 'volumetric') {
+        displayContext.fillStyle = 'black';
+        displayContext.fillRect(0, 0, displayCanvas.width, displayCanvas.height);
+        
+        // Add 3D-like effect with shading
+        const gradient = displayContext.createRadialGradient(
+          displayCanvas.width/2, displayCanvas.height/2, 50,
+          displayCanvas.width/2, displayCanvas.height/2, 200
+        );
+        
+        gradient.addColorStop(0, 'rgba(150, 150, 150, 0.8)');
+        gradient.addColorStop(1, 'rgba(30, 30, 30, 0.8)');
+        
+        displayContext.fillStyle = gradient;
+        displayContext.fillRect(0, 0, displayCanvas.width, displayCanvas.height);
+        
+        // If we have the correct target, show it in 3D
+        if (currentTarget && currentTarget.name === 'Feto 3D' && currentProbe === currentTarget.probe) {
+          // Draw a 3D-looking fetus
+          displayContext.fillStyle = 'rgba(220, 220, 220, 0.9)';
+          
+          // Head
+          displayContext.beginPath();
+          displayContext.arc(displayCanvas.width/2, displayCanvas.height/2 - 50, 70, 0, Math.PI * 2);
+          displayContext.fill();
+          
+          // Body
+          displayContext.beginPath();
+          displayContext.ellipse(displayCanvas.width/2, displayCanvas.height/2 + 70, 50, 90, 0, 0, Math.PI * 2);
+          displayContext.fill();
+          
+          // Arms
+          displayContext.beginPath();
+          displayContext.ellipse(displayCanvas.width/2 - 70, displayCanvas.height/2 + 30, 20, 60, Math.PI/4, 0, Math.PI * 2);
+          displayContext.fill();
+          
+          displayContext.beginPath();
+          displayContext.ellipse(displayCanvas.width/2 + 70, displayCanvas.height/2 + 30, 20, 60, -Math.PI/4, 0, Math.PI * 2);
+          displayContext.fill();
+          
+          // Face features for 3D effect
+          displayContext.fillStyle = 'rgba(180, 180, 180, 0.9)';
+          displayContext.beginPath();
+          displayContext.arc(displayCanvas.width/2 - 25, displayCanvas.height/2 - 60, 10, 0, Math.PI * 2);
+          displayContext.arc(displayCanvas.width/2 + 25, displayCanvas.height/2 - 60, 10, 0, Math.PI * 2);
+          displayContext.fill();
+          
+          displayContext.beginPath();
+          displayContext.arc(displayCanvas.width/2, displayCanvas.height/2 - 30, 15, 0, Math.PI, false);
+          displayContext.stroke();
+          
+          // Add 3D render effect
+          for (let i = 0; i < 100; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = Math.random() * 200;
+            const x = displayCanvas.width/2 + Math.cos(angle) * radius;
+            const y = displayCanvas.height/2 + Math.sin(angle) * radius;
+            
+            if (Math.random() > 0.5) {
+              displayContext.fillStyle = `rgba(255, 255, 255, ${0.1 + Math.random() * 0.1})`;
+              displayContext.beginPath();
+              displayContext.arc(x, y, 1 + Math.random() * 2, 0, Math.PI * 2);
+              displayContext.fill();
+            }
+          }
+          
+          // Add volume rendering effect
+          displayContext.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+          displayContext.lineWidth = 1;
+          for (let i = 0; i < 10; i++) {
+            displayContext.beginPath();
+            displayContext.rect(
+              displayCanvas.width/2 - 150 + i * 15, 
+              displayCanvas.height/2 - 150 + i * 15,
+              300 - i * 30,
+              300 - i * 30
+            );
+            displayContext.stroke();
+          }
+          
+          // Add GE Volume Rendering text
+          displayContext.font = '14px Arial';
+          displayContext.fillStyle = 'rgba(255, 255, 255, 0.7)';
+          displayContext.textAlign = 'right';
+          displayContext.fillText('GE Volume Render HD', displayCanvas.width - 20, displayCanvas.height - 20);
+        } else {
+          // Generic 3D view
+          displayContext.font = '24px Arial';
+          displayContext.fillStyle = 'rgba(150, 150, 150, 0.8)';
+          displayContext.textAlign = 'center';
+          displayContext.fillText('Sonda 3D/4D necessaria', displayCanvas.width/2, displayCanvas.height/2);
+          displayContext.fillText('per visualizzazione volumetrica', displayCanvas.width/2, displayCanvas.height/2 + 40);
+        }
+      } else {
+        // Not available with this probe
+        drawBMode();
+        
+        // Overlay message
+        displayContext.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        displayContext.fillRect(0, 0, displayCanvas.width, displayCanvas.height);
+        
+        displayContext.font = '24px Arial';
+        displayContext.fillStyle = '#6b378b';
+        displayContext.textAlign = 'center';
+        displayContext.fillText('3D/4D non disponibile', displayCanvas.width/2, displayCanvas.height/2 - 20);
+        displayContext.fillText('con questa sonda', displayCanvas.width/2, displayCanvas.height/2 + 20);
+        displayContext.font = '18px Arial';
+        displayContext.fillText('Seleziona sonda Volumetrica', displayCanvas.width/2, displayCanvas.height/2 + 60);
+      }
+    }
+    
+    function drawProbeOverlay() {
+      // Add probe-specific overlay
+      displayContext.strokeStyle = 'rgba(107, 55, 139, 0.7)';
+      displayContext.lineWidth = 2;
+      
+      if (currentProbe === 'linear') {
+        // Linear format - rectangular
+        displayContext.strokeRect(displayCanvas.width * 0.1, displayCanvas.height * 0.1, displayCanvas.width * 0.8, displayCanvas.height * 0.8);
+        
+        // Depth markings
+        for (let i = 0; i <= 10; i++) {
+          const y = displayCanvas.height * 0.1 + (displayCanvas.height * 0.8 * i / 10);
+          displayContext.beginPath();
+          displayContext.moveTo(displayCanvas.width * 0.1 - 10, y);
+          displayContext.lineTo(displayCanvas.width * 0.1, y);
+          displayContext.stroke();
+          
+          if (i % 2 === 0) {
+            displayContext.fillStyle = '#6b378b';
+            displayContext.font = '12px Arial';
+            displayContext.textAlign = 'right';
+            displayContext.fillText(`${i * depth / 10}`, displayCanvas.width * 0.1 - 15, y + 4);
+          }
+        }
+      } else if (currentProbe === 'convex' || currentProbe === 'endocavity') {
+        // Convex format - curvilinear
+        displayContext.beginPath();
+        displayContext.arc(displayCanvas.width / 2, -displayCanvas.height * 0.5, displayCanvas.height * 1.2, Math.PI * 0.2, Math.PI * 0.8);
+        displayContext.lineTo(displayCanvas.width * 0.1, displayCanvas.height * 0.9);
+        displayContext.lineTo(displayCanvas.width * 0.9, displayCanvas.height * 0.9);
+        displayContext.closePath();
+        displayContext.stroke();
+        
+        // Depth markings on center line
+        for (let i = 0; i <= 10; i++) {
+          const y = displayCanvas.height * 0.1 + (displayCanvas.height * 0.8 * i / 10);
+          displayContext.beginPath();
+          displayContext.moveTo(displayCanvas.width / 2 - 10, y);
+          displayContext.lineTo(displayCanvas.width / 2 + 10, y);
+          displayContext.stroke();
+          
+          if (i % 2 === 0) {
+            displayContext.fillStyle = '#6b378b';
+            displayContext.font = '12px Arial';
+            displayContext.textAlign = 'left';
+            displayContext.fillText(`${i * depth / 10}`, displayCanvas.width / 2 + 15, y + 4);
+          }
+        }
+      } else if (currentProbe === 'phased') {
+        // Phased array - sector
+        displayContext.beginPath();
+        displayContext.moveTo(displayCanvas.width / 2, displayCanvas.height * 0.1);
+        displayContext.lineTo(displayCanvas.width * 0.1, displayCanvas.height * 0.9);
+        displayContext.lineTo(displayCanvas.width * 0.9, displayCanvas.height * 0.9);
+        displayContext.closePath();
+        displayContext.stroke();
+        
+        // Depth markings - arc
+        for (let i = 2; i <= 10; i += 2) {
+          const radius = displayCanvas.height * 0.8 * i / 10;
+          displayContext.beginPath();
+          displayContext.arc(displayCanvas.width / 2, displayCanvas.height * 0.1, radius, 0, Math.PI);
+          displayContext.stroke();
+          
+          displayContext.fillStyle = '#6b378b';
+          displayContext.font = '12px Arial';
+          displayContext.textAlign = 'center';
+          displayContext.fillText(`${i * depth / 10}`, displayCanvas.width / 2, displayCanvas.height * 0.1 + radius + 15);
+        }
+      } else if (currentProbe === 'volumetric') {
+        // 3D/4D format
+        if (currentMode === '3d') {
+          // 3D render border
+          displayContext.strokeRect(displayCanvas.width * 0.05, displayCanvas.height * 0.05, displayCanvas.width * 0.9, displayCanvas.height * 0.9);
+          
+          // 3D volume indicator
+          displayContext.strokeStyle = 'rgba(107, 55, 139, 0.5)';
+          for (let i = 1; i < 5; i++) {
+            displayContext.strokeRect(
+              displayCanvas.width * (0.05 - i*0.01), 
+              displayCanvas.height * (0.05 - i*0.01), 
+              displayCanvas.width * (0.9 + i*0.02), 
+              displayCanvas.height * (0.9 + i*0.02)
+            );
+          }
+        } else {
+          // 2D view from 3D probe
+          displayContext.beginPath();
+          displayContext.moveTo(displayCanvas.width / 2, displayCanvas.height * 0.1);
+          displayContext.lineTo(displayCanvas.width * 0.2, displayCanvas.height * 0.9);
+          displayContext.lineTo(displayCanvas.width * 0.8, displayCanvas.height * 0.9);
+          displayContext.closePath();
+          displayContext.stroke();
+          
+          // Volume indicator
+          displayContext.strokeStyle = 'rgba(107, 55, 139, 0.5)';
+          displayContext.beginPath();
+          displayContext.moveTo(displayCanvas.width / 2, displayCanvas.height * 0.1);
+          displayContext.lineTo(displayCanvas.width * 0.1, displayCanvas.height * 0.9);
+          displayContext.lineTo(displayCanvas.width * 0.9, displayCanvas.height * 0.9);
+          displayContext.closePath();
+          displayContext.stroke();
+        }
+      }
+      
+      // Focus indicator
+      displayContext.strokeStyle = '#6b378b';
+      displayContext.lineWidth = 3;
+      const focusY = displayCanvas.height * (0.1 + (focus / depth) * 0.8);
+      displayContext.beginPath();
+      displayContext.moveTo(5, focusY);
+      displayContext.lineTo(15, focusY);
+      displayContext.stroke();
+      
+      // Focus indicator on right
+      displayContext.beginPath();
+      displayContext.moveTo(displayCanvas.width - 5, focusY);
+      displayContext.lineTo(displayCanvas.width - 15, focusY);
+      displayContext.stroke();
+    }
+    
+    function selectRandomTarget() {
+      const randomIndex = Math.floor(Math.random() * scanTargets.length);
+      currentTarget = scanTargets[randomIndex];
+      
+      // Update patient display
+      document.getElementById('patientImg').innerHTML = `
+        <span class="patient-overlay">${currentTarget.name}</span>
+        <div class="patient-difficulty">
+          ${Array(3).fill(0).map((_, i) => 
+            `<div class="difficulty-dot ${i < currentTarget.difficulty ? 'active' : ''}"></div>`
+          ).join('')}
+        </div>
+      `;
+      
+      // Set background color based on the target
+      document.getElementById('patientImg').style.backgroundColor = currentTarget.background || 'rgba(0, 0, 0, 0.3)';
+      
+      // Redraw ultrasound display
+      drawUltrasoundImage();
+    }
+    
+    function checkScan() {
+      // Check if the player used the right probe and settings
+      if (currentProbe === currentTarget.probe) {
+        // Correct probe!
+        const modeCorrect = (
+          (currentTarget.name === 'Stenosi Carotidea' && (currentMode === 'cfm' || currentMode === 'doppler')) ||
+          (currentTarget.name === 'Insufficienza Mitralica' && (currentMode === 'cfm' || currentMode === 'doppler')) ||
+          (currentTarget.name === 'Feto 3D' && currentMode === '3d') ||
+          (currentTarget.name === 'TVP Femorale' && currentMode === 'cfm') ||
+          (currentTarget.name === 'Aorta Addominale' && (currentMode === 'cfm' || currentMode === 'doppler')) ||
+          (currentMode === 'bmode') // B-mode works for all
+        );
+        
+        if (modeCorrect) {
+          // Success!
+          const pointsEarned = currentTarget.difficulty * 10;
+          score += pointsEarned;
+          document.getElementById('score').innerText = `Score: ${score}`;
+          
+          showNotification(`Diagnosi corretta! +${pointsEarned} punti`, 'success');
+          
+          // Play success sound
+          const audio = new Audio();
+          audio.src = 'data:audio/mp3;base64,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KAAAAgAAA0gAAABAAABpAAAACAAADSAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//tSZAAAANwAKAAAAgAAA0gAAABAAABpAAAACAAADSAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//tSZAAAANwAKAAAAgAAA0gAAABAAABpAAAACAAADSAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+          audio.play();
+          
+          // Next target
+          setTimeout(() => {
+            selectRandomTarget();
+          }, 1500);
+        } else {
+          showNotification('Modalità di scansione non corretta', 'warning');
+        }
+      } else {
+        showNotification(`Sonda non corretta per ${currentTarget.name}`, 'error');
+      }
+    }
+    
+    function showNotification(message, type = 'info') {
+      const notification = document.getElementById('notification');
+      notification.innerText = message;
+      
+      // Set color based on type
+      if (type === 'success') {
+        notification.style.backgroundColor = 'rgba(0, 128, 0, 0.9)';
+      } else if (type === 'warning') {
+        notification.style.backgroundColor = 'rgba(255, 165, 0, 0.9)';
+      } else if (type === 'error') {
+        notification.style.backgroundColor = 'rgba(255, 0, 0, 0.9)';
+      } else {
+        notification.style.backgroundColor = 'rgba(107, 55, 139, 0.95)';
+      }
+      
+      // Show and hide with animation
+      notification.style.opacity = 1;
+      setTimeout(() => {
+        notification.style.opacity = 0;
+      }, 2000);
+    }
+  </script>
+</body>
+</html>
